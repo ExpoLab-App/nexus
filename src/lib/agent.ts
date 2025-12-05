@@ -128,7 +128,7 @@ export class NexusAgent implements AgentFactory {
       name: "Nexus",
       description: "Responsible for overseeing the entire research process.",
       tools: [documentSearchTool, webSearchTool],
-      systemPrompt: AGENT_RESEARCH_PROMPT(documents),
+      systemPrompt: AGENT_RESEARCH_PROMPT,
       llm: deepseek({
         model: config.deepSeekModel,
       }),
@@ -151,6 +151,26 @@ export class NexusAgent implements AgentFactory {
 
   public getMemory(sessionId: string): Memory | undefined {
     return this.memories.get(sessionId);
+  }
+
+  public async addDocumentUpdateToMemory(sessionId: string, documentPaths: string[]): Promise<void> {
+    const memory = this.memories.get(sessionId);
+    if (!memory) {
+      console.warn(`[NexusAgent] Memory not found for session ${sessionId}`);
+      return;
+    }
+
+    const documentList = documentPaths.map(path => `- ${path}`).join("\n");
+    const message = `Updated documents:\n${documentList}`;
+
+    await memory.add({
+      role: "system" as const,
+      content: message,
+    });
+
+    console.log(`[NexusAgent] Added document update message to memory for session ${sessionId}`);
+
+    console.log("Updated Memory", await memory.get());
   }
 }
 

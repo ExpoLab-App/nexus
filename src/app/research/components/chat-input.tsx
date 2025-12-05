@@ -63,6 +63,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       return;
     }
 
+
     const payload = {
       query: inputValue,
       documentPaths: selectedDocuments.map((doc) => doc.path),
@@ -98,6 +99,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   return (
+
     <div className="border-t flex-shrink-0">
       <CardContent className="p-4" role="form" aria-label="Send message">
         <div className="flex space-x-2">

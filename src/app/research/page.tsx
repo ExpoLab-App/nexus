@@ -42,9 +42,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Document, useDocuments } from "@/hooks/useDocuments";
-import { TITLE_MAPPINGS } from "@/lib/constants";
 import { formatToolHeader } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, GlobeIcon, Menu, MessageCircle, SquarePen } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -84,7 +83,7 @@ function useSessionId() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionIdRef = useRef<string>(searchParams.get('session') || crypto.randomUUID());
-  
+
   const resetSession = useCallback(() => {
     const newSessionId = crypto.randomUUID();
     sessionIdRef.current = newSessionId;
@@ -96,7 +95,7 @@ function useSessionId() {
       router.replace(`/research?session=${sessionIdRef.current}`);
     }
   }, [searchParams, router]);
-  
+
   return { sessionId: sessionIdRef.current, resetSession };
 }
 
@@ -133,6 +132,7 @@ function ResearchChatPageContent() {
   const [language, setLanguage] = useState<Language>("ts");
   const [mode, setMode] = useState<"research" | "code">("research");
   const [scrollOpacity, setScrollOpacity] = useState(0);
+  const [preferWebSearch, setPreferWebSearch] = useState<boolean>(false);
 
   const [isStreaming, setIsStreaming] = useState(false);
   const [serverResponding, setServerResponding] = useState(false); // ✅ new
@@ -163,6 +163,7 @@ function ResearchChatPageContent() {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
+
   // Set up scroll listener
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -179,6 +180,7 @@ function ResearchChatPageContent() {
     }
   }, [error]);
 
+  
   // Prepare index when document changes
   useEffect(() => {
     const prepareDocumentIndex = async () => {
@@ -229,10 +231,10 @@ function ResearchChatPageContent() {
         prev.map((msg) =>
           msg.id === assistantPlaceholderMessage.id
             ? {
-                ...msg,
-                content: "Sorry, there was an issue with the response stream.",
-                isLoadingPlaceholder: false,
-              }
+              ...msg,
+              content: "Sorry, there was an issue with the response stream.",
+              isLoadingPlaceholder: false,
+            }
             : msg,
         ),
       );
@@ -305,11 +307,11 @@ function ResearchChatPageContent() {
           prev.map((msg) =>
             msg.id === assistantPlaceholderMessage.id
               ? {
-                  ...msg,
-                  content:
-                    "Code generation started. Check the preview panel to see live progress. You may continue chatting after the code generation is complete.",
-                  isLoadingPlaceholder: false,
-                }
+                ...msg,
+                content:
+                  "Code generation started. Check the preview panel to see live progress. You may continue chatting after the code generation is complete.",
+                isLoadingPlaceholder: false,
+              }
               : msg,
           ),
         );
@@ -370,16 +372,27 @@ function ResearchChatPageContent() {
                     prev.map((gen) =>
                       gen.id === currentCodeGeneration
                         ? {
-                            ...gen,
-                            sources: (payload.documentPaths || []).map((p) => {
-                              const normalized = p.replace(/^documents\//, "");
+                          ...gen,
+                          //   sources: (payload.documentPaths || []).map((p) => {
+                          //     const normalized = p.replace(/^documents\//, "");
+                          //     return {
+                          //       path: normalized,
+                          //       name: normalized,
+                          //       displayTitle: TITLE_MAPPINGS[normalized] || normalized,
+                          //     };
+                          //   }),
+                          // }
+                          sources: (payload.documentPaths || [])
+                            .filter(p => p != null)
+                            .map((fileId) => {
+                              // Find the document by ID to get proper display info
+                              const doc = selectedDocuments.find(d => d.id === fileId);
                               return {
-                                path: normalized,
-                                name: normalized,
-                                displayTitle: TITLE_MAPPINGS[normalized] || normalized,
+                                path: fileId,
+                                name: doc?.name || fileId,
+                                displayTitle: doc?.displayTitle || doc?.name || fileId,
                               };
-                            }),
-                          }
+                            }),}
                         : gen,
                     ),
                   );
@@ -447,13 +460,13 @@ function ResearchChatPageContent() {
             prev.map((gen) =>
               gen.id === currentCodeGeneration
                 ? {
-                    ...gen,
-                    topic: topicCandidate,
-                    plan: planText,
-                    pseudocode: pseudocodeText,
-                    implementation: implementationText,
-                    currentSection: phase,
-                  }
+                  ...gen,
+                  topic: topicCandidate,
+                  plan: planText,
+                  pseudocode: pseudocodeText,
+                  implementation: implementationText,
+                  currentSection: phase,
+                }
                 : gen,
             ),
           );
@@ -491,12 +504,12 @@ function ResearchChatPageContent() {
           prev.map((msg): Message =>
             msg.id === assistantPlaceholderMessage.id
               ? {
-                  ...msg,
-                  content: safeBuffer,
-                  isLoadingPlaceholder: false,
-                  sources: [],
-                  citations: undefined,
-                }
+                ...msg,
+                content: safeBuffer,
+                isLoadingPlaceholder: false,
+                sources: [],
+                citations: undefined,
+              }
               : msg,
           ),
         );
@@ -507,21 +520,21 @@ function ResearchChatPageContent() {
         prev.map((gen) =>
           gen.id === currentCodeGeneration
             ? {
-                ...gen,
-                topic:
-                  planText
-                    .split("\n")
-                    .map((s) => s.trim())
-                    .find((s) => s.length > 0) || "",
-                plan: planText,
-                pseudocode: pseudocodeText,
-                implementation: implementationText,
-                hasStructuredResponse: Boolean(
-                  planText || pseudocodeText || implementationText,
-                ),
-                isStreaming: false,
-                currentSection: undefined,
-              }
+              ...gen,
+              topic:
+                planText
+                  .split("\n")
+                  .map((s) => s.trim())
+                  .find((s) => s.length > 0) || "",
+              plan: planText,
+              pseudocode: pseudocodeText,
+              implementation: implementationText,
+              hasStructuredResponse: Boolean(
+                planText || pseudocodeText || implementationText,
+              ),
+              isStreaming: false,
+              currentSection: undefined,
+            }
             : gen,
         ),
       );
@@ -543,6 +556,20 @@ const handleStop = () => {
 //   console.log("handleStop called");
 // };
 
+  const handleSendMessage = async (payload: {
+    query: string;
+    documentPaths: string[];
+    preferWebSearch?: boolean;
+    tool?: string;
+    language?: Language;
+    scope?: string[];
+  }) => {
+    const userMessage: Message = {
+      id: crypto.randomUUID(),
+      content: payload.query,
+      role: "user",
+      timestamp: new Date().toISOString(),
+    };
 
 // Modify handleSendMessage
 const handleSendMessage = async (payload: {
@@ -615,6 +642,31 @@ const handleSendMessage = async (payload: {
       body: JSON.stringify(streamingPayload),
       signal: controller.signal,
     });
+    try {
+      const streamingPayload = {
+        ...payload,
+        enableStreaming: true,
+        sessionId,
+      };
+      const response = await fetch("/api/research/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(streamingPayload),
+      });
+
+      if (!response.ok) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantPlaceholderMessage.id
+              ? {
+                ...msg,
+                content:
+                  "Sorry, I couldn't get a response. Please try again.",
+                isLoadingPlaceholder: false,
+              }
+              : msg,
+          ),
+        );
 
     if (!response.ok) {
       setMessages((prev) =>
@@ -676,7 +728,7 @@ const handleSendMessage = async (payload: {
 
 
 
-  const handleKeyDown = () => {};
+  const handleKeyDown = () => { };
 
   useEffect(() => {
     setMode(activeTool === "code-composer" ? "code" : "research");
@@ -688,9 +740,8 @@ const handleSendMessage = async (payload: {
       return "Select documents to start chatting...";
     if (activeTool === "code-composer") return "Draft code from selected papers...";
     if (selectedDocuments.length === 1) {
-      return `Ask questions about ${
-        selectedDocuments[0].displayTitle || selectedDocuments[0].name
-      }...`;
+      return `Ask questions about ${selectedDocuments[0].displayTitle || selectedDocuments[0].name
+        }...`;
     }
     return `Ask questions about ${selectedDocuments.length} documents...`;
   };
@@ -709,12 +760,17 @@ const handleSendMessage = async (payload: {
     const payload = {
       query: inputValue,
       documentPaths: selectedDocuments.map((doc) => doc.path),
+      preferWebSearch,
       ...(activeTool === "code-composer" && {
         tool: "code-composer" as const,
         language,
         scope: [] as string[],
       }),
     };
+
+    if (preferWebSearch) {
+      setPreferWebSearch(false);
+    }
 
     handleSendMessage(payload);
   };
@@ -746,7 +802,13 @@ const handleSendMessage = async (payload: {
   }, []);
 
   const handleSelectAll = useCallback(() => {
-    setSelectedDocuments(documents);
+    // `documents` may be grouped (Document[][]) or flat (Document[]).
+    const allDocs =
+      Array.isArray(documents) && documents.length > 0 && Array.isArray((documents as any)[0])
+        ? (documents as Document[][]).flat()
+        : (documents as unknown as Document[]);
+
+    setSelectedDocuments(allDocs);
   }, [documents]);
 
   const handleDeselectAll = useCallback(() => {
@@ -805,9 +867,8 @@ const handleSendMessage = async (payload: {
 
         {/* Desktop Sidebar: Document Selection */}
         <Card
-          className={`hidden md:flex transition-all duration-300 border-r bg-card/20 backdrop-blur-sm rounded-none ${
-            isSidebarCollapsed ? "w-16" : "w-72 max-w-72"
-          }`}
+          className={`hidden md:flex transition-all duration-300 border-r bg-card/20 backdrop-blur-sm rounded-none ${isSidebarCollapsed ? "w-16" : "w-72 max-w-72"
+            }`}
         >
           <div className="flex flex-col w-full">
             <div className="flex flex-row items-center justify-between space-y-0 mt-[0.45rem] px-3.5">
@@ -895,6 +956,7 @@ const handleSendMessage = async (payload: {
                 role="main"
                 aria-label="Chat interface"
               >
+
                 {selectedDocuments.length === 0 ? (
                   <CardContent className="flex-1 flex items-center justify-center p-4">
                     <Card className="text-center max-w-md">
@@ -924,7 +986,7 @@ const handleSendMessage = async (payload: {
                 ) : (
                   <>
                     {/* Chat Header */}
-                    <div 
+                    <div
                       className="px-6 py-4 pb-12 absolute top-0 left-0 z-10 flex-shrink-0 w-full"
                       style={{
                         background: `linear-gradient(to bottom, 
@@ -938,9 +1000,9 @@ const handleSendMessage = async (payload: {
                       }}
                     >
                       <h1 className="text-2xl md:text-xl font-bold tracking-tight text-white whitespace-nowrap ">
-                      Nexus
-        </h1>
-                    </div> 
+                        Nexus
+                      </h1>
+                    </div>
 
                     {/* Messages */}
                     <div className="flex-1 min-h-0 overflow-hidden">
@@ -966,11 +1028,10 @@ const handleSendMessage = async (payload: {
                               >
                                 <Card
                                   variant="message"
-                                  className={`max-w-[85%] md:max-w-[80%] transition-all duration-200 ease-out ${
-                                    message.role === "user"
+                                  className={`max-w-[85%] md:max-w-[80%] transition-all duration-200 ease-out ${message.role === "user"
                                       ? "bg-primary text-primary-foreground border-primary"
                                       : "bg-card"
-                                  }`}
+                                    }`}
                                 >
                                   <CardContent variant="message">
                                     {message.role === "user" ? (
@@ -1005,13 +1066,16 @@ const handleSendMessage = async (payload: {
                                             if (text) nodes.push(
                                               <Response key={`txt-${message.id}-${idx}`}>{text}</Response>
                                             );
+                                            const docCount = ins.part.type === "search_documents" 
+                                              ? (ins.part.input as any)?.documentPaths?.length 
+                                              : undefined;
                                             nodes.push(
                                               <Tool key={`tool-${message.id}-${ins.part.id || idx}`} defaultOpen={false}>
                                                 <ToolHeader
                                                   type={formatToolHeader(
                                                     ins.part.type as string,
                                                     ins.part.state as any,
-                                                    message.docPaths?.length
+                                                    docCount
                                                   ) as any}
                                                   state={ins.part.state as any}
                                                 />
@@ -1047,57 +1111,44 @@ const handleSendMessage = async (payload: {
                       </div>
                     </div>
 
-<div className="px-1.5">
-                    <PromptInput onSubmit={handleSubmit} className="border-t flex-shrink-0 mt-0 relative">
-                      <PromptInputTextarea
-                        value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
-                        onKeyDown={handleKeyDown as any}
-                        placeholder={getPlaceholder()}
-                        disabled={
-                          isLoading ||
-                          isPreparingIndex ||
-                          selectedDocuments.length === 0
-                        }
-                      />
-                      <PromptInputToolbar className="border-t">
-                        <PromptInputTools>
-                          <PromptInputModelSelect
-                            onValueChange={(value) => {
-                              const next = value as "research" | "code";
-                              setMode(next);
-                              setTool(next === "code" ? "code-composer" : "default");
-                            }}
-                            value={mode}
-                          >
-                            <PromptInputModelSelectTrigger>
-                              <PromptInputModelSelectValue />
-                            </PromptInputModelSelectTrigger>
-                            <PromptInputModelSelectContent>
-                              {Object.entries(modeOptions).map(([id, name]) => (
-                                <PromptInputModelSelectItem 
-                                  key={id} 
-                                  value={id}
-                                >
-                                  {name}
-                                </PromptInputModelSelectItem>
-                              ))}
-                            </PromptInputModelSelectContent>
-                          </PromptInputModelSelect>
-                          {mode === "code" && (
+                    <div className="px-1.5">
+                      <PromptInput onSubmit={handleSubmit} className="border-t flex-shrink-0 mt-0 relative">
+                        <PromptInputTextarea
+                          value={inputValue}
+                          onChange={(e) => setInputValue(e.target.value)}
+                          onKeyDown={handleKeyDown as any}
+                          placeholder={getPlaceholder()}
+                          disabled={
+                            isLoading ||
+                            isPreparingIndex ||
+                            selectedDocuments.length === 0
+                          }
+                        />
+                        <PromptInputToolbar className="border-t">
+                          <PromptInputTools>
                             <PromptInputModelSelect
-                              onValueChange={(value) => setLanguage(value as Language)}
-                              value={language}
+                              onValueChange={(value) => {
+                                const next = value as "research" | "code";
+                                setMode(next);
+                                setTool(next === "code" ? "code-composer" : "default");
+                              }}
+                              value={mode}
                             >
                               <PromptInputModelSelectTrigger>
                                 <PromptInputModelSelectValue />
                               </PromptInputModelSelectTrigger>
                               <PromptInputModelSelectContent>
-                                <PromptInputModelSelectItem value="ts">TypeScript</PromptInputModelSelectItem>
-                                <PromptInputModelSelectItem value="python">Python</PromptInputModelSelectItem>
-                                <PromptInputModelSelectItem value="cpp">C++</PromptInputModelSelectItem>
+                                {Object.entries(modeOptions).map(([id, name]) => (
+                                  <PromptInputModelSelectItem
+                                    key={id}
+                                    value={id}
+                                  >
+                                    {name}
+                                  </PromptInputModelSelectItem>
+                                ))}
                               </PromptInputModelSelectContent>
                             </PromptInputModelSelect>
+                            
                           )}
                           <PromptInputButton disabled={mode === "code" || true /* TODO: update */}>
                             <GlobeIcon size={16} />
@@ -1147,6 +1198,49 @@ const handleSendMessage = async (payload: {
 
                       </PromptInputToolbar>
                     </PromptInput>
+<!--                             {mode === "code" && (
+                              <PromptInputModelSelect
+                                onValueChange={(value) => setLanguage(value as Language)}
+                                value={language}
+                              >
+                                <PromptInputModelSelectTrigger>
+                                  <PromptInputModelSelectValue />
+                                </PromptInputModelSelectTrigger>
+                                <PromptInputModelSelectContent>
+                                  <PromptInputModelSelectItem value="ts">TypeScript</PromptInputModelSelectItem>
+                                  <PromptInputModelSelectItem value="python">Python</PromptInputModelSelectItem>
+                                  <PromptInputModelSelectItem value="cpp">C++</PromptInputModelSelectItem>
+                                </PromptInputModelSelectContent>
+                              </PromptInputModelSelect>
+                            )}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <PromptInputButton
+                                  disabled={mode === "code"}
+                                  onClick={() => setPreferWebSearch(!preferWebSearch)}
+                                  variant={preferWebSearch ? "default" : "ghost"}
+                                  className={preferWebSearch ? "bg-primary text-primary-foreground hover:bg-primary/90" : ""}
+                                >
+                                  <GlobeIcon size={16} />
+                                  <span>Search</span>
+                                </PromptInputButton>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Nexus will search the web</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </PromptInputTools>
+                          <PromptInputSubmit
+                            disabled={
+                              !inputValue.trim() ||
+                              isLoading ||
+                              isPreparingIndex ||
+                              selectedDocuments.length === 0
+                            }
+                            status={isLoading || isPreparingIndex ? "submitted" : ("ready" as any)}
+                          />
+                        </PromptInputToolbar>
+                      </PromptInput> -->
                     </div>
                   </>
                 )}
