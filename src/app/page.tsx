@@ -26,6 +26,14 @@ export default function WelcomePage() {
           <Button
             variant="secondary"
             onClick={() => {
+              router.push("/graphql-tutor");
+            }}
+          >
+            GraphQL Tutor
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => {
               window.open("https://resilientdb.apache.org/", "_blank");
             }}
           >
