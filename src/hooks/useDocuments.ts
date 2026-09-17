@@ -1,5 +1,6 @@
 import { TITLE_MAPPINGS } from '@/lib/constants';
 import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
 
 export interface Document {
   id: string;
@@ -44,20 +45,15 @@ function transformGroupedData(
 
 
 const fetchDocuments = async (): Promise<Document[][]> => {
-  const response = await fetch('/api/research/documents');
-  const data = await response.json();
   const folderIds = [
-      "16yvY-jnMOZ1hMGaMYk0oi86eBbCqCHR2", // Class PDFs
-      "1BKiGBrrrBMegCBUV1RlpkWBTktNPt4GL" // BOOKS
-    ];
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch documents: ${response.status}`);
-  }
-  const transformed = transformGroupedData(data.data, folderIds);
-  console.log(' documents transformed successfully',transformed)
-  // console.log(Object.values(transformed).flat())
-  return transformed; // Flatten the structure to return an array of documents
+    "16yvY-jnMOZ1hMGaMYk0oi86eBbCqCHR2", // Class PDFs
+    "1BKiGBrrrBMegCBUV1RlpkWBTktNPt4GL"  // BOOKS
+  ];
+
+  const response = await axios.get('/api/research/documents');
+  const transformed = transformGroupedData(response.data.data, folderIds);
+  console.log('documents transformed successfully', transformed);
+  return transformed;
 };
 
 
