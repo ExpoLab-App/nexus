@@ -10,6 +10,7 @@ import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import { CodeBlock, CodeBlockCopyButton } from './code-block';
+import { MathErrorBoundary } from './math-error-boundary';
 
 /**
  * Parses markdown text and removes incomplete tokens to prevent partial rendering
@@ -154,6 +155,28 @@ function parseIncompleteMarkdown(text: string): string {
     }
   }
 
+    // Handle incomplete inline math ($...$)
+  const inlineMathPattern = /(\$)([^\$]*?)$/;
+  const inlineMathMatch = result.match(inlineMathPattern);
+  if (inlineMathMatch) {
+    const dollarSigns = (result.match(/\$/g) || []).length;
+    // If odd number of $, we have incomplete inline math - close it
+    if (dollarSigns % 2 === 1) {
+      result = `${result}$`;
+    }
+  }
+
+  // Handle incomplete block math ($$...$$)
+  const blockMathPattern = /(\$\$)([\s\S]*?)$/;
+  const blockMathMatch = result.match(blockMathPattern);
+  if (blockMathMatch) {
+    const doubleDollarSigns = (result.match(/\$\$/g) || []).length;
+    // If odd number of $$, we have incomplete block math - close it
+    if (doubleDollarSigns % 2 === 1) {
+      result = `${result}$$`;
+    }
+  }
+
   return result;
 }
 
@@ -294,6 +317,7 @@ const ResponseComponent = ({
       : children;
 
   return (
+    <MathErrorBoundary>
     <div
       className={cn(
         'size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0',
@@ -313,6 +337,7 @@ const ResponseComponent = ({
         {parsedChildren}
       </HardenedMarkdown>
     </div>
+    </MathErrorBoundary>
   );
 };
 
