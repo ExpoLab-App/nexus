@@ -646,7 +646,7 @@ function ResearchChatPageContent() {
     }
   };
 
-  const handleKeyDown = () => { };
+  //const handleKeyDown = () => { };
 
   useEffect(() => {
     setMode(activeTool === "code-composer" ? "code" : "research");
@@ -1034,7 +1034,7 @@ function ResearchChatPageContent() {
                         <PromptInputTextarea
                           value={inputValue}
                           onChange={(e) => setInputValue(e.target.value)}
-                          onKeyDown={handleKeyDown as any}
+                          //{handleKeyDown as any}
                           placeholder={getPlaceholder()}
                           disabled={
                             isLoading ||
