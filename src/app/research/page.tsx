@@ -135,7 +135,7 @@ function ResearchChatPageContent() {
   const [preferWebSearch, setPreferWebSearch] = useState<boolean>(false);
 
   const [isStreaming, setIsStreaming] = useState(false);
-  const [serverResponding, setServerResponding] = useState(false); // ✅ new
+  const [, setServerResponding] = useState(false); // new
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const { sessionId, resetSession } = useSessionId();
